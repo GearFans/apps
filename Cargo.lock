@@ -357,6 +357,7 @@ version = "0.1.0"
 dependencies = [
  "fungible-token-messages",
  "gstd",
+ "gtest",
  "hex",
  "parity-scale-codec",
  "primitive-types",
@@ -821,7 +822,19 @@ name = "nft-example"
 version = "0.1.0"
 dependencies = [
  "gstd",
+ "gtest",
+ "nft-example-io",
  "non-fungible-token",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+]
+
+[[package]]
+name = "nft-example-io"
+version = "0.1.0"
+dependencies = [
+ "gstd",
  "parity-scale-codec",
  "primitive-types",
  "scale-info",
