@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
     "fungible-token",
+    "fungible-token-messages",
     "gear-feeds-router",
     "ping",
     "non-fungible-token",

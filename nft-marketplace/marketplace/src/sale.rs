@@ -1,4 +1,4 @@
-use crate::{ft_transfer, nft_transfer, nft_messages::nft_payouts, Event, ItemSoldOutput, Market, GAS_RESERVE};
+use crate::{ft_transfer, nft_transfer, nft_messages::nft_payouts, MarketEvent, Market, GAS_RESERVE};
 use gstd::{exec, msg, prelude::*, ActorId};
 use primitive_types::{H256, U256};
 
@@ -12,12 +12,11 @@ impl Market {
     // * `nft_contract_id`: NFT contract address
     // * `token_id`: the token ID
     pub async fn buy_item(&mut self, nft_contract_id: &ActorId, token_id: U256) {
-        if !self.item_exists(nft_contract_id, token_id) {
-            panic!("That item does not exist");
-        }
         let contract_and_token_id =
             format!("{}{}", H256::from_slice(nft_contract_id.as_ref()), token_id);
-        let item = self.items.get_mut(&contract_and_token_id).unwrap();
+        let item = self.items
+            .get_mut(&contract_and_token_id)
+            .expect("Item does not exist");
         if item.auction.is_some() {
             panic!("There is an opened auction");
         }
@@ -58,11 +57,11 @@ impl Market {
         item.on_sale = false;
 
         msg::reply(
-            Event::ItemSold(ItemSoldOutput {
+            MarketEvent::ItemSold {
                 owner: buyer_id,
                 nft_contract_id: *nft_contract_id,
                 token_id,
-            }),
+            },
             exec::gas_available() - GAS_RESERVE,
             0,
         );

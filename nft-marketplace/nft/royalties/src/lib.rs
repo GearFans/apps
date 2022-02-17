@@ -1,6 +1,14 @@
+#![no_std]
 use gstd::{prelude::*, ActorId};
 use scale_info::TypeInfo;
-use crate::{Royalties, Payout};
+
+#[derive(Debug, Decode, Encode, TypeInfo, Clone)]
+pub struct Royalties {
+   accounts: BTreeMap<ActorId, u16>,
+   percent: u16,
+}
+
+pub type Payout = BTreeMap<ActorId, u128>;
 
 impl Royalties {
     pub fn validate(&self) {

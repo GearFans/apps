@@ -8,11 +8,11 @@ use base::NonFungibleTokenBase;
 pub mod token;
 use token::TokenMetadata;
 
-use primitive_types::{H256, U256};
+use primitive_types::U256;
 use scale_info::TypeInfo;
 
 const GAS_RESERVE: u64 = 500_000_000;
-const ZERO_ID: ActorId = ActorId::new(H256::zero().to_fixed_bytes());
+const ZERO_ID: ActorId = ActorId::new([0u8; 32]);
 
 #[derive(Debug)]
 pub struct NonFungibleToken {
@@ -23,7 +23,7 @@ pub struct NonFungibleToken {
     pub token_metadata_by_id: BTreeMap<U256, TokenMetadata>,
     pub token_approvals: BTreeMap<U256, ActorId>,
     pub balances: BTreeMap<ActorId, U256>,
-    pub operator_approval: BTreeMap<ActorId, BTreeMap<ActorId, bool>>,
+    pub operator_approval: BTreeMap<ActorId, ActorId>,
 }
 
 impl NonFungibleTokenBase for NonFungibleToken {
@@ -64,14 +64,12 @@ impl NonFungibleTokenBase for NonFungibleToken {
 
         self.owner_by_id.insert(token_id, *to);
 
-        let transfer_token = Transfer {
-            from: H256::from_slice(from.as_ref()),
-            to: H256::from_slice(to.as_ref()),
-            token_id,
-        };
-
         msg::reply(
-            NftEvent::Transfer(transfer_token),
+            Event::Transfer {
+                from: *from,
+                to: *to,
+                token_id,
+            },
             exec::gas_available() - GAS_RESERVE,
             0,
         );
@@ -90,13 +88,12 @@ impl NonFungibleTokenBase for NonFungibleToken {
 
         self.token_approvals.insert(token_id, *spender);
 
-        let approve_token = Approve {
-            owner: H256::from_slice(owner.as_ref()),
-            spender: H256::from_slice(spender.as_ref()),
-            token_id,
-        };
         msg::reply(
-            NftEvent::Approval(approve_token),
+            Event::Approval {
+                owner: *owner,
+                spender: *spender,
+                token_id,
+            },
             exec::gas_available() - GAS_RESERVE,
             0,
         );
@@ -106,20 +103,35 @@ impl NonFungibleTokenBase for NonFungibleToken {
         if operator == &ZERO_ID {
             panic!("NonFungibleToken: Approval for a zero address");
         }
-
-        self.operator_approval
-            .entry(*owner)
-            .or_default()
-            .insert(*operator, approved);
-
-        let approve_operator = ApproveForAll {
-            owner: H256::from_slice(owner.as_ref()),
-            operator: H256::from_slice(operator.as_ref()),
-            approved,
+        match approved {
+            true => self.operator_approval.insert(*owner, *operator),
+            false => self.operator_approval.remove(owner),
         };
 
         msg::reply(
-            NftEvent::ApprovalForAll(approve_operator),
+            Event::ApprovalForAll {
+                owner: *owner,
+                operator: *operator,
+                approved,
+            },
+            exec::gas_available() - GAS_RESERVE,
+            0,
+        );
+    }
+
+    fn balance_of(&self, account: &ActorId) {
+        let balance = *self.balances.get(account).unwrap_or(&U256::zero());
+        msg::reply(
+            Event::BalanceOf(balance),
+            exec::gas_available() - GAS_RESERVE,
+            0,
+        );
+    }
+
+    fn owner_of(&self, token_id: U256) {
+        let owner = self.owner_by_id.get(&token_id).unwrap_or(&ZERO_ID);
+        msg::reply(
+            Event::OwnerOf(*owner),
             exec::gas_available() - GAS_RESERVE,
             0,
         );
@@ -127,6 +139,19 @@ impl NonFungibleTokenBase for NonFungibleToken {
 }
 
 impl NonFungibleToken {
+    pub const fn new() -> NonFungibleToken {
+        NonFungibleToken {
+            name: String::new(),
+            symbol: String::new(),
+            base_uri: String::new(),
+            owner_by_id: BTreeMap::new(),
+            token_metadata_by_id: BTreeMap::new(),
+            token_approvals: BTreeMap::new(),
+            balances: BTreeMap::new(),
+            operator_approval: BTreeMap::new(),
+        }
+    }
+
     pub fn is_token_owner(&self, token_id: U256, account: &ActorId) -> bool {
         account == self.owner_by_id.get(&token_id).unwrap_or(&ZERO_ID)
     }
@@ -139,13 +164,7 @@ impl NonFungibleToken {
         if self.token_approvals.get(&token_id).unwrap_or(&ZERO_ID) == account {
             return AuthAccount::ApprovedActor;
         }
-        if *self
-            .operator_approval
-            .get(owner)
-            .unwrap_or(&BTreeMap::<ActorId, bool>::default())
-            .get(account)
-            .unwrap_or(&false)
-        {
+        if self.operator_approval.contains_key(owner) {
             return AuthAccount::Operator;
         }
         AuthAccount::None
@@ -156,37 +175,28 @@ impl NonFungibleToken {
     }
 }
 
-#[derive(Debug, Encode, Decode, TypeInfo)]
-pub struct Approve {
-    owner: H256,
-    spender: H256,
-    token_id: U256,
-}
-
-#[derive(Debug, Encode, Decode, TypeInfo)]
-pub struct ApproveForAll {
-    owner: H256,
-    operator: H256,
-    approved: bool,
-}
-
-#[derive(Debug, Decode, Encode, TypeInfo)]
-pub struct Transfer {
-    pub from: H256,
-    pub to: H256,
-    pub token_id: U256,
-}
-
 #[derive(Debug, Encode, TypeInfo, Decode)]
-pub enum NftEvent {
-    Transfer(Transfer),
-    Approval(Approve),
-    ApprovalForAll(ApproveForAll),
-    OwnerOf(H256),
+pub enum Event {
+    Transfer {
+        from: ActorId,
+        to: ActorId,
+        token_id: U256,
+    },
+    Approval {
+        owner: ActorId,
+        spender: ActorId,
+        token_id: U256,
+    },
+    ApprovalForAll {
+        owner: ActorId,
+        operator: ActorId,
+        approved: bool,
+    },
+    OwnerOf(ActorId),
     BalanceOf(U256),
 }
 
-#[derive(Debug, Encode, TypeInfo, Decode)]
+#[derive(Debug, Encode, TypeInfo)]
 pub enum AuthAccount {
     Owner,
     ApprovedActor,

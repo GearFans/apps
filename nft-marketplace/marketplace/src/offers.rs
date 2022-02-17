@@ -3,6 +3,7 @@ use codec::{Decode, Encode};
 use gstd::{exec, msg, prelude::*, ActorId};
 use primitive_types::{H256, U256};
 use scale_info::TypeInfo;
+
 #[derive(Debug, Encode, Decode, TypeInfo, Clone)]
 pub struct Offer {
     pub id: ActorId,
@@ -18,9 +19,9 @@ impl Market {
         let contract_and_token_id =
             format!("{}{}", H256::from_slice(nft_contract_id.as_ref()), token_id);
         let item = self.items.get_mut(&contract_and_token_id).unwrap();
-        if item.auction.is_some() && item.auction.as_ref().unwrap().is_auction_on_going()  {
-                panic!("Auction must have ended");
-            }
+        // if item.auction.is_some() && item.auction.as_ref().unwrap().is_auction_on_going()  {
+        //         panic!("Auction must have ended");
+        //     }
         let new_offer = Offer {
             id: msg::source(),
             price,
@@ -47,9 +48,9 @@ impl Market {
         if item.owner_id != msg::source() {
             panic!("only NFT owner can accept offer");
         }
-        if item.auction.is_some() && item.auction.as_ref().unwrap().is_auction_on_going()  {
-            panic!("Auction must have ended");
-        }
+        // if item.auction.is_some() && item.auction.as_ref().unwrap().is_auction_on_going()  {
+        //     panic!("Auction must have ended");
+        // }
         let offers = item.offers.as_ref().unwrap_or(&Vec::new()).clone();
         let not_expired_offers: Vec<Offer> = offers
             .into_iter()

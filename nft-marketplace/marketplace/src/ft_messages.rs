@@ -1,4 +1,5 @@
-use gstd::{exec, msg, prelude::*, ActorId};
+use gstd::{msg, ActorId};
+use fungible_token_messages::*;
 const GAS_RESERVE: u64 = 500_000_000;
 
 pub async fn ft_transfer(token_id: &ActorId, from: &ActorId, to: &ActorId, amount: u128) {
@@ -7,46 +8,29 @@ pub async fn ft_transfer(token_id: &ActorId, from: &ActorId, to: &ActorId, amoun
         to: *to,
         amount,
     };
-    let _transfer_response: FTEvent = msg::send_and_wait_for_reply(
+    let _transfer_response: Event = msg::send_and_wait_for_reply(
         *token_id,
-        FTAction::TransferFrom(transfer_data),
-        exec::gas_available() - GAS_RESERVE,
+        Action::TransferFrom(transfer_data),
+        GAS_RESERVE,
         0,
     )
     .await
     .expect("Error in transfer message");
 }
 
-#[derive(Debug, Decode, Encode, TypeInfo)]
-pub struct TransferFromInput {
-    pub owner: ActorId,
-    pub to: ActorId,
-    pub amount: u128,
+pub async fn balance(token_id: &ActorId, account: &ActorId) -> u128 {
+    let balance: Event = msg::send_and_wait_for_reply(
+        *token_id,
+        Action::BalanceOf(*account),
+        GAS_RESERVE,
+        0,
+    )
+    .await
+    .expect("Error in balance message");
+
+    match balance {
+        Event::Balance(balance) => return balance,
+        _ => panic!("Unexpected reply"),
+    }
 }
 
-#[derive(Debug, Decode, Encode, TypeInfo)]
-pub struct TransferFromReply {
-    pub owner: ActorId,
-    pub sender: ActorId,
-    pub recipient: ActorId,
-    pub amount: u128,
-    pub new_limit: u128,
-}
-
-
-#[derive(Debug, Decode, Encode, TypeInfo)]
-pub enum FTAction {
-    Mint,
-    Burn,
-    Transfer,
-    TransferFrom(TransferFromInput),
-}
-
-#[derive(Debug, Encode, Decode, TypeInfo)]
-pub enum FTEvent {
-    Transfer,
-    Approval,
-    AdminAdded,
-    AdminRemoved,
-    TransferFrom(TransferFromReply),
-}
