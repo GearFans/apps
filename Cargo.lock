@@ -356,6 +356,7 @@ name = "curve-amm"
 version = "0.1.0"
 dependencies = [
  "fungible-token-messages",
+ "futures",
  "gstd",
  "gtest",
  "hex",
