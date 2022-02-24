@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.10;
 
 interface IERC721 {
     function transferFrom(
@@ -10,6 +10,11 @@ interface IERC721 {
 }
 
 contract dutchAuction {
+    event Start();
+    event Bid(address indexed sender, uint amount);
+    event Withdraw(address indexed bidder, uint amount);
+    event End(address winner, uint amount);
+
     uint private constant DURATION = 7 days;
 
     IERC721 public immutable nft;
@@ -17,9 +22,9 @@ contract dutchAuction {
 
     address payable public immutable seller;
     uint public immutable startingPrice;
-    uint public immutable discountRate;
     uint public immutable startAt;
     uint public immutable expiresAt;
+    uint public immutable discountRate;
 
     constructor(
         uint _startingPrice,
@@ -29,11 +34,11 @@ contract dutchAuction {
     ) {
         seller = payable(msg.sender);
         startingPrice = _startingPrice;
-        discountRate = _discountRate;
         startAt = block.timestamp;
         expiresAt = block.timestamp + DURATION;
+        discountRate = _discountRate;
 
-        require(_startingPrice >= _discountRate * DURATION, "Starting price is too low");
+        require(_startingPrice >= _discountRate * DURATION, "starting price < min");
 
         nft = IERC721(_nft);
         nftId = _nftId;
@@ -45,7 +50,7 @@ contract dutchAuction {
         return startingPrice - discount;
     }
 
-    function buy() external payable {
+    function bid() external payable { // bid
         require(block.timestamp < expiresAt, "This auction has ended");
 
         uint price = getPrice();
@@ -53,13 +58,20 @@ contract dutchAuction {
 
         nft.transferFrom(seller, msg.sender, nftId);
         uint refund = msg.value - price;
-
         if (refund > 0) {
             payable(msg.sender).transfer(refund);
         }
 
+        emit Bid(msg.sender, msg.value);
+
         selfdestruct(seller);
+    }
+
+    function withdraw() external {
+        emit Withdraw(msg.sender, bal);
     }
 }
 
 // https://www.quicknode.com/guides/solidity/how-to-create-a-dutch-auction-smart-contract
+
+// https://solidity-by-example.org/app/dutch-auction/
