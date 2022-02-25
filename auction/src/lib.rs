@@ -12,6 +12,38 @@ const GAS_RESERVE: u64 = 500_000_000;
 const ZERO_ID: ActorId = ActorId::new([0u8; 32]);
 const DURATION: u64 = 60 * 60 * 24; // 1 day
 
+#[derive(Debug, Decode, Encode, TypeInfo)]
+pub struct InitConfig {
+    pub StartAt: u64,   // timestamp
+    pub ExpiresAt: u64, // timestamp
+    pub Price: u64,
+}
+
+#[derive(Debug)]
+struct Auction {
+    start_at: u64,   // timestamp
+    expires_at: u64, // timestamp
+    price: u64,
+}
+
+impl Auction {
+    pub const fn new() -> Self {
+        Self {
+            start_at: 0,
+            expires_at: 0,
+            price: 0,
+        }
+    }
+
+    fn start(&self) {}
+    fn end(&self) {}
+    fn get_price(&self) {}
+    fn buy(&self) {}
+    fn withdraw(&self) {}
+}
+
+static mut AUCTION: Auction = Auction::new();
+
 gstd::metadata! {
     title: "Auction",
     init:
@@ -24,49 +56,44 @@ gstd::metadata! {
         output: StateReply,
 }
 
-#[derive(Debug, Decode, Encode, TypeInfo)]
-pub struct InitConfig {
-    pub StartAt: u64,   // timestamp
-    pub ExpiresAt: u64, // timestamp
-    pub Price: u64,
-}
-
-#[derive(Clone)]
-pub struct Auction {
-    pub StartAt: u64,   // timestamp
-    pub ExpiresAt: u64, // timestamp
-    pub Price: u64,
-}
-
-impl Auction {
-    pub const fn new() -> Self {
-        Self {
-            StartAt: 0,
-            ExpiresAt: 0,
-            Price: 0,
-        }
-    }
-}
-
-static mut AUCTION: Auction = Auction::new();
-
 #[no_mangle]
 pub unsafe extern "C" fn init() {
     let config: InitConfig = msg::load().expect("Unable to decode InitConfig");
 
     let bt = Duration::from_millis(exec::block_timestamp());
-
     let _expiresAt = bt.saturating_add(Duration::from_secs(DURATION));
-    AUCTION.StartAt = bt.as_secs();
-    AUCTION.ExpiresAt = _expiresAt.as_secs();
-    AUCTION.Price = config.Price;
+
+    AUCTION.start_at = bt.as_secs();
+    AUCTION.expires_at = _expiresAt.as_secs();
+    AUCTION.price = config.Price;
 }
 
 pub unsafe extern "C" fn handle() {
-    let new_msg = String::from_utf8(msg::load_bytes()).expect("Invalid message");
+    let action: Action = msg::load().expect("Could not load Action");
+    match action {
+        Action::Start(newtime) => {
+            AUCTION.start();
+            // event
+        }
 
-    if new_msg == "PING" {
-        msg::reply_bytes("PONG", 12_000_000, 0);
+        Action::End(newtime) => {
+            AUCTION.end();
+            // event
+        }
+
+        Action::GetPrice(tokenid) => {
+            AUCTION.get_price();
+        }
+
+        Action::Buy(newtime) => {
+            AUCTION.buy();
+            // event
+        }
+
+        Action::Withdraw() => {
+            AUCTION.withdraw();
+            // event
+        }
     }
 }
 
