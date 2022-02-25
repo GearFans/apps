@@ -1,29 +1,41 @@
 ## Auction
 
-### Reference
+### 参考
 
-[Dutch auction](https://en.wikipedia.org/wiki/Dutch_auction)
+https://github.com/ethereumbook/ethereumbook/tree/develop/code/auction_dapp
+
+https://github.com/brynbellomy/solidity-auction
+
+https://www.quicknode.com/guides/solidity/how-to-create-a-dutch-auction-smart-contract
+
+https://solidity-by-example.org/app/dutch-auction/
+
+https://solidity-by-example.org/app/english-auction/
 
 [English auction](https://en.wikipedia.org/wiki/English_auction)
 
-### Auction key
+[Dutch auction](https://en.wikipedia.org/wiki/Dutch_auction)
 
-start time
-end time
-product
-price
-bid
-bidder
+### 拍卖要素
 
-### Auction process
+开始时间
+结束时间
+出价人
+定价
+出价
+物品
 
-general process : product => pricing => auction => start time => bid => Bidding method (Dutch auction /English auction / ... ) => end time => get product
+### 拍卖逻辑
 
-### diagram ( "ethers" can represent any token)
+正常：物品 => 定价 => 拍卖 => 开始时间 =>  出价 => 出价逻辑 => 时间结束 => 物归谁家
+
+流拍：
+
+### 图示 ( "ethers" 能代表任何 token)
 
 > ![](./img/auction_diagram.png)
 
-### Pseudo contract structur
+### 伪代码/合约结构
 
 ```rust
 gstd::metadata! {
