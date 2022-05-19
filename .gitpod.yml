@@ -8,3 +8,8 @@ tasks:
   - name: build project
     init: build project
     command: cargo watch -x run
+
+# List the ports to expose. Learn more https://www.gitpod.io/docs/config-ports/
+ports:
+  - port: 3000
+    onOpen: open-browser # open-preview
